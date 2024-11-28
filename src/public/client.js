@@ -1,10 +1,8 @@
-
 // Demander le nom d'utilisateur
 const usernameModal = new bootstrap.Modal(document.getElementById('promptUsernameModal'), { backdrop: 'static' });
-usernameModal.show();
-
 const submitUsernameBtn = document.getElementById('submitUsername');
 const usernameInput = document.getElementById('usernameInput');
+if (!MODE_BYPASS) usernameModal.show();
 
 // Dégriser le bouton d'authentification lorsque l'input du pseudo n'est pas vide
 const verifBtn = () => submitUsernameBtn.disabled = !usernameInput.value;
@@ -13,11 +11,13 @@ verifBtn();
 
 // L'utilisateur à entré un pseudo et s'authentifie
 submitUsernameBtn.addEventListener('click', () => {
+
     if (!usernameInput.value) return;
     usernameJoueur = usernameInput.value;
 
     // S'authentifier auprès du socket
     authentifierSocket(() => { usernameModal.hide(); });
+
 });
 
 // Afficher la liste des serveurs
@@ -31,7 +31,73 @@ function afficherListeServeurs(data) {
     for (const serv of data) {
         creerCarteServeur(serv);
     }
+
 }
+
+// Créer le tablier d'hexagone servant de fond pour l'écran d'accueil
+const svgFondHexa = d3.select('#' + selectServerScreen.id)
+    .append("svg")
+    .attr("class", "fond-hexagone");
+
+// Dimensions du viewport afin d'ajuster la taille de la grille
+const vw = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0);
+const vh = Math.max(document.documentElement.clientHeight || 0, window.innerHeight || 0);
+const fondLignesNb = Math.ceil(vh / hauteurHexagone(40)) + 6;
+const fondColonnesNb = Math.ceil(vw / largeurHexagone(40)) + 6;
+
+creerTablier(fondLignesNb, fondColonnesNb, 40, svgFondHexa,
+    ((hexa, l, c) => {
+        hexa.attr('stroke', '#0d6efd');
+        hexa.attr('fill', 'none');
+        hexa.attr('stroke-width', '3');
+        hexa.attr('id', 'hex_fond_' + l + '_' + c);
+    })
+);
+
+function animationFondAccueil() {
+
+    // Anime l'hexagone en position (c; l)
+    function animerHexagone(l, c) {
+        const hex = d3.select('#hex_fond_' + l + '_' + c);
+        hex.transition()
+            .duration(200)
+            .attr("fill", "#4294ff")
+            .on("end", () => {
+                choisirSuivant(l, c);
+
+                // "Réinitialiser" l'animation
+                hex.transition()
+                    .duration(1500)
+                    .attr("fill", "#212529")
+            })
+    }
+
+    // Choisir aléatoirement un hexagone en aval de la position (c; l)
+    function choisirSuivant(l, c) {
+        if (l >= fondLignesNb - 1) {
+            // Dernière ligne atteinte; relancer l'animation
+            animationFondAccueil();
+            return;
+        }
+
+        // On choisit, aléatoirement, soit l'hexagone gauche ou droit
+        // Quand la ligne est paire; l'hexagone droit a un x = c
+        // Quand la ligne est impaire; l'hexagone droit a un x = c+1
+        const prochaineCol = Math.random() > 0.5
+            ? l % 2 === 0 ? c : c+1 // Aller à droite
+            : l % 2 === 0 ? c-1 : c; // Aller à gauche
+
+        // Animer l'hexagone suivant
+        animerHexagone(l + 1, prochaineCol);
+    }
+
+    // Choisir une colonne aléatoire sur le tablier
+    const debutColonneNb = Math.round(Math.random() * (fondColonnesNb - 6) + 3);
+    animerHexagone(0, debutColonneNb);
+
+}
+
+animationFondAccueil();
 
 // Créer une carte HTML pour un serveur
 function creerCarteServeur(serv) {

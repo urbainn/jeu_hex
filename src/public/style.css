@@ -20,3 +20,93 @@
     }
 
 }
+
+.fond-hexagone {
+    width: calc(100vw + 80px);
+    height: calc(100vh + 160px);
+    position: fixed;
+    z-index: -1;
+    opacity: 0.15;
+    top: -40px;
+    left: -80px;
+}
+
+.titre-fort {
+    margin: 0 0 0.1rem 0;
+    color: white;
+    font-weight: 800;
+}
+
+.jeu-hex {
+    display: none;
+
+    .tablier {
+        width: 80vw;
+        position: relative;
+    }
+
+    .panneau-lateral {
+        width: 20vw;
+        display: flex;
+        flex-flow: column;
+        height: 100vh;
+        background-color: #181a1c;
+        padding: 2rem;
+
+        .chat-info-header {
+            flex: 0 1 auto;
+            margin-bottom: 1rem;
+
+            h5 {
+                margin: 0;
+                color: rgba(255, 255, 255, 0.6);
+                font-size: 1.2rem;
+            }
+        }
+
+        .chat-info-joueurs {
+            flex: 0 1 auto;
+
+            h4 {
+                font-size: 1.3rem;
+            }
+        }
+
+        .chat-discussion {
+            flex: 1 1 auto;
+            display: flex;
+            flex-flow: column-reverse;
+        }
+
+        .chat-footer {
+            flex: 0 1 auto;
+        }
+    }
+}
+
+/** ANIMATIONS **/
+.fade-out {
+    animation: fade-out 0.5s;
+}
+
+.fade-in {
+    animation: fade-in 0.5s;
+}
+
+@keyframes fade-out {
+    from {
+        opacity: 1;
+    }
+    to {
+        opacity: 0;
+    }
+}
+
+@keyframes fade-in {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}

@@ -28,6 +28,7 @@ socket.on('authentification', (data) => {
 // Un nouveau serveur vient d'être créé
 socket.on('nouveauServeur', (data) => {
     creerCarteServeur(data);
+    aucunServeurDisponibleMsg.style.display = 'none';
 });
 
 // Un joueur rejoint un serveur
