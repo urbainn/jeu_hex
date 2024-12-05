@@ -45,7 +45,7 @@ const vh = Math.max(document.documentElement.clientHeight || 0, window.innerHeig
 const fondLignesNb = Math.ceil(vh / hauteurHexagone(40)) + 6;
 const fondColonnesNb = Math.ceil(vw / largeurHexagone(40)) + 6;
 
-creerTablier(fondLignesNb, fondColonnesNb, 40, svgFondHexa,
+creerTablier(fondLignesNb, fondColonnesNb, 40, false, svgFondHexa,
     ((hexa, l, c) => {
         hexa.attr('stroke', '#0d6efd');
         hexa.attr('fill', 'none');

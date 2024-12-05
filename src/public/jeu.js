@@ -42,10 +42,11 @@ function hauteurHexagone(rayon) {
  * @param {Number} nbLignes
  * @param {Number} nbColonnes 
  * @param {Number} rayon
+ * @param {Boolean} estLosange Dessiner le tablier en forme de losange si vrai, sinon en forme rectangulaire
  * @param {*} corpsSvg Element SVG sur lequel dessiner le tablier (résultant d'un d3.select(...))
  * @param {*} hexCallback Callback appellé à la création d'un hexagone (paramètres: (élément 'path' d3.js, num. ligne, num. colonne))
  */
-function creerTablier(nbLignes, nbColonnes, rayon, corpsSvg, hexCallback) {
+function creerTablier(nbLignes, nbColonnes, rayon, estLosange, corpsSvg, hexCallback) {
     const hexagone = creeHexagone(rayon);
     const distance = rayon - (Math.sin(1 * Math.PI / 3) * rayon);
 
@@ -53,7 +54,12 @@ function creerTablier(nbLignes, nbColonnes, rayon, corpsSvg, hexCallback) {
         for (let c = 0; c < nbColonnes; c++) {
 
             let d = "";
-            let decalageX = (l % 2 === 1 ? rayon - distance : 0);
+            let decalageX = estLosange ? l * (rayon - distance)
+                : (l % 2 === 1 ? rayon - distance : 0);
+
+            if (estLosange) {
+                decalageX += l * (rayon - distance);
+            }
 
             for (h in hexagone) {
                 x = hexagone[h][0] + (rayon-distance) * (2+2 * c) + decalageX;
@@ -83,6 +89,19 @@ async function afficherEcranJeu() {
     // Afficher l'écran de jeu (transition fade-in)
     ecranJeu.style.display = 'flex';
     ecranJeu.classList.add('fade-in');
+
+    // Dessiner le tablier de jeu (en losange)
+    creerTablier(
+        11, 11, 40, // Tablier de 11x11 cases de 40px de rayon 
+        true, // Tablier en forme de losange
+        d3.select('#tablierSvg'),
+        ((hexa, l, c) => {
+            hexa.attr('stroke', '#0d6efd');
+            hexa.attr('fill', 'none');
+            hexa.attr('stroke-width', '3');
+            hexa.attr('id', 'hex_jeu_' + l + '_' + c);
+        }),
+    );
 
 }
 
