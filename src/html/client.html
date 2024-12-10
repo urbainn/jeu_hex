@@ -47,6 +47,7 @@
             </div>
         </div>
 
+        <!-- FIN écran de sélection serveur -->
     </div>
 
     <!-- Ecran de jeu -->
@@ -57,14 +58,31 @@
         <div class="container-tablier">
           <svg id="tablierSvg"></svg>
         </div>
+
+        <!-- 'Profil' des joueurs -->
+        <div id="profilJoueurBleu" class="profil-joueur bleu">
+          <div class="fond-profil"></div>
+          <div class="profil-texte">
+            <h2 id="pseudoJoueurBleu">Joueur Bleu</h2>
+            <h4>00:00</h4>
+          </div>
+        </div>
+
+        <div id="profilJoueurRouge" class="profil-joueur rouge">
+          <div class="fond-profil"></div>
+          <div class="profil-texte">
+            <h4>00:00</h4>
+            <h2 id="pseudoJoueurRouge">Joueur Rouge</h2>
+          </div>
+        </div>
       </div>
 
       <!-- Discussions et informations en direct -->
       <div id="chatContainer" class="panneau-lateral">
         <div class="chat-info-header">
           <h4 class="titre-fort">Partie en cours..</h4>
-          <h5>Débutée il y a <span id="partie-timer">0s</span>.</h5>
-          <h5>Tours joués: <span id="tours-joues">0</span>.</h5>
+          <h5>Débutée il y a <span id="partieTimer">0s</span>.</h5>
+          <h5>Tours joués: <span id="toursJoues">0</span>.</h5>
         </div>
 
         <div class="chat-info-joueurs">
@@ -87,6 +105,7 @@
         </div>
       </div>
 
+      <!-- FIN écran de jeu -->
     </div>
 
 </body>

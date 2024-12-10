@@ -2,6 +2,15 @@
 const ecranSelectionServeur = document.getElementById('selectServerScreen');
 const ecranJeu = document.getElementById('jeuHexScreen');
 
+// Variables de jeu
+let estSpectateur = false;
+let joueurCouleur = null; // null = spectateur, 0 = rouge, 1 = bleu
+let tourJoueur = 0; // 0 = rouge, 1 = bleu
+
+// Elements du jeu
+const profilJoueurRouge = document.getElementById('profilJoueurRouge');
+const profilJoueurBleu = document.getElementById('profilJoueurBleu');
+
 /**
  * Retourne les coordonnées d'un hexagone de rayon donné
  * @param {Number} rayon 
@@ -78,7 +87,7 @@ function creerTablier(nbLignes, nbColonnes, rayon, estLosange, corpsSvg, hexCall
                 // Tablier rectangulaire :
                 // On décale les lignes impaires d'un demi hexagone afin de créer un
                 // affichage en "nid d'abeille" où les hexagones s'emboitent
-                decalageX = (l % 2 === 1 ? rayon - distance : 0)
+                decalageX = (l % 2 === 1 ? rayon - distance : 0);
             }
 
             for (h in hexagone) {
@@ -170,31 +179,6 @@ function creerTablier(nbLignes, nbColonnes, rayon, estLosange, corpsSvg, hexCall
 }
 
 /**
- * Dessiner, sur le tablier, les repères d'équipe (bordures rouges et bleues).
- * @param {Number} nbLignes
- * @param {Number} nbColonnes 
- * @param {Number} rayon
- * @param {*} corpsSvg Element SVG sur lequel dessiner le tablier (résultant d'un d3.select(...))
- * @param {Array} coordsDepart Coordonnées auxquelles dessiner le tablier sur le SVG
- */
-function dessinerReperesEquipe(nbLignes, nbColonnes, rayon, corpsSvg, coordsDepart = [0, 0]) {
-    const hexagone = creeHexagone(rayon);
-    const distance = distanceHexagone(rayon);
-
-    const dessinerRepereY = (debutX, debutY, finX, finY) => {
-        return `M${debutX},${debutY}L${debutX-10},${debutY-10}`
-            + `L${finX-10},${finY+10}L${finX},${finY}Z`;
-    }
-
-    [
-        dessinerRepereY(coordsHexagoneX(0), coordsHexagoneY(0), coordsHexagoneX(0, 11), coordsHexagoneY(11))
-    ].forEach((d) => {
-        corpsSvg.append("path").attr("d", d);
-    });
-
-}
-
-/**
  * Basculer en 'mode jeu'. Cache l'écran de sélection de serveur, et affiche l'écran de jeu.
  */
 async function afficherEcranJeu() {
@@ -245,7 +229,7 @@ async function afficherEcranJeu() {
                 .duration(500)
                 .delay(l * 75 + c * 75) // Affichage progressif des hexagones (animation)
                 .attr('stroke', '#9099a2')
-                .attr('fill', (l % 2 === 0 ? c : c+1) % 2 === 0 ? '#ffffff15' : 'none')
+                .attr('fill', (l % 2 === 0 ? c : c+1) % 2 === 0 ? '#ffffff15' : '#212529')
         }), [0, rayonOpti]
     );
 
@@ -253,8 +237,33 @@ async function afficherEcranJeu() {
     tablierSVG.attr('width', dimensionsTablier[0] + 0.5 * rayonOpti + 10)
         .attr('height', dimensionsTablier[1] +  2.5 * rayonOpti + 10);
 
-    // Dessiner les repères de terrain bleu/rouge
-    
+    // Animer l'entrée profils des joueurs
+    setTimeout(() => {
+        profilJoueurBleu.style.transform = 'translateX(0)';
+        profilJoueurRouge.style.transform = 'translateX(0)';
+        profilJoueurRouge.style.opacity = '1';
+        profilJoueurBleu.style.opacity = '1';
+    }, 2000);
+
+    // Si le joueur n'est pas en mode spectateur,
+    // ajouter des écouteurs d'événements au tablier
+    if (!estSpectateur) {
+        tablierSVG.on('click', function(d) {
+            // ..est un hexagone
+            if (d.target.id.startsWith('hex_jeu_')) {
+
+                // est-ce le tour du joueur ?
+                if (tourJoueur !== joueurCouleur) return;
+
+                d3.select('#' + d.target.id)
+                    .transition()
+                    .duration(100)
+                    .attr('fill', joueurCouleur === 0 ? '#ff5c5c' : '#5cabfb')
+                    .attr('stroke', joueurCouleur === 0 ? '#b54343' : '#3c76b0');
+
+            }
+        });
+    }
 
 }
 

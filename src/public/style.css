@@ -39,6 +39,8 @@
 
 .jeu-hex {
     display: none;
+    height: 100vh;
+    overflow: hidden;
 
     .tablier {
         width: 80vw;
@@ -52,6 +54,8 @@
         height: 100vh;
         background-color: #181a1c;
         padding: 2rem;
+        position: relative;
+        z-index: 1;
 
         .chat-info-header {
             flex: 0 1 auto;
@@ -84,12 +88,71 @@
     }
 
     .tablier {
+        position: relative;
+
         .container-tablier {
             display: flex;
             height: 100vh;
             width: 100%;
             align-items: center;
             justify-content: center;
+        }
+
+        .profil-joueur {
+            position: absolute;
+            opacity: 0;
+            transition: transform 0.8s ease-in-out,
+                        opacity 0.8s ease-in-out;
+            
+            &.bleu {
+                top: 0;
+                right: 0;
+                transform: translateX(100%);
+                text-align: right;
+
+                .fond-profil {
+                    background-color: #5cabfb;
+                    top: -15rem;
+                    right: -10rem;    
+                }
+            }
+
+            &.rouge {
+                bottom: 0;
+                left: 0;
+                transform: translateX(-100%);
+
+                .fond-profil {
+                    background-color: #ff5c5c;
+                    bottom: -15rem;
+                    left: -10rem;    
+                }
+            }
+
+            .fond-profil {
+                width: 20rem;
+                height: 30rem;
+                transform: rotate(-37deg);
+                background-color: #5cabfb;
+                position: absolute;
+                z-index: -1;
+            }
+
+            .profil-texte {
+                padding: 1.3rem 1.7rem;
+                text-shadow: 0 0 7px rgba(0, 0, 0, 0.4);
+                h2 {
+                    font-weight: 900;
+                    margin: 0;
+                }
+
+                h4 {
+                    font-weight: 700;
+                    font-family: monospace;
+                    margin: 0.2rem;
+                    color: #ffffffaf;
+                }
+            }
         }
     }
 }
