@@ -100,7 +100,7 @@ class Partie {
 
         // Mettre à jour les informations du joueur
         joueur.partie = this;
-        joueur.socket.emit('partieAccepte', { partie: this.serialiser(), spectateur: this.joueur2 === joueur });
+        joueur.socket.emit('partieAccepte', { partie: this.serialiser(), spectateur: this.joueur2 !== joueur }); // changé this.joueur2 === joueur à cause ligne 94
 
     }
 
@@ -153,10 +153,10 @@ class Partie {
 
         // Déterminer aléatoirement le joueur qui commence (ROUGE)
         this.joueurRouge = Math.random() > 0.5 ? this.joueur1 : this.joueur2;
-        
+        // ce broadcast n'est pas récup donc les joueurs n'ont pas de couleurs
         this.broadcast('debutPartie', {
-            rouge: joueurRouge.id,
-            bleu: joueurRouge === this.joueur1 ? this.joueur2.id : this.joueur1.id
+            rouge: this.joueurRouge.id,
+            bleu: this.joueurRouge === this.joueur1 ? this.joueur2.id : this.joueur1.id
         });
     }
 

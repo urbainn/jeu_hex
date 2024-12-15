@@ -198,7 +198,6 @@ function creerTablier(nbLignes, nbColonnes, rayon, estLosange, corpsSvg, hexCall
  * Basculer en 'mode jeu'. Cache l'écran de sélection de serveur, et affiche l'écran de jeu.
  */
 async function afficherEcranJeu() {
-
     // Cacher l'écran de sélection de serveur (transition fade-out)
     ecranSelectionServeur.classList.add('fade-out');
     await new Promise(r => setTimeout(r, 490));
@@ -273,7 +272,6 @@ async function afficherEcranJeu() {
                     afficherMessageVolant('Ce n\'est pas votre tour !', '#fff');
                     return;
                 }
-
                 jouerCoup(d.target.id);
 
             }
@@ -321,6 +319,7 @@ function afficherMessageVolant(message, couleur) {
 function rejoindrePartieAcceptee(data) {
     const partie = data.partie;
     estSpectateur = data.spectateur;
+    
 
     console.log('Données de la partie : ', partie);
 
@@ -341,7 +340,7 @@ function rejoindrePartieAcceptee(data) {
     // Laisser les animations d'affichage du jeu se terminer,
     // puis afficher le modal d'attente de joueur/début de partie
     setTimeout(() => {
-        debutPartieModal.show();
+        debutPartieModal.show(); // n'est hide nulle part (va avec le Debutpartie)
     }, 4000);
 }
 

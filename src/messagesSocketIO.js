@@ -63,6 +63,7 @@ module.exports = function messagesSocketsIO(socket, app) {
 
         // Rejoindre la partie
         partie.joueurRejoint(joueur);
+        partie.demarrerPartie(); // n'est présent nulle part donc je l'ai mis ici pour test ?
     });
 
     /** Un joueur joue un coup */
