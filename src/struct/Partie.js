@@ -155,8 +155,8 @@ class Partie {
         this.joueurRouge = Math.random() > 0.5 ? this.joueur1 : this.joueur2;
         // ce broadcast n'est pas récup donc les joueurs n'ont pas de couleurs
         this.broadcast('debutPartie', {
-            rouge: this.joueurRouge.id,
-            bleu: this.joueurRouge === this.joueur1 ? this.joueur2.id : this.joueur1.id
+            rouge: joueurRouge.id,
+            bleu: joueurRouge === this.joueur1 ? this.joueur2.id : this.joueur1.id
         });
     }
 
