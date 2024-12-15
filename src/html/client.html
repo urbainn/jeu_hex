@@ -105,6 +105,25 @@
         </div>
       </div>
 
+      <!-- Modal d'attente de joueurs/début de partie -->
+      <div class="modal fade debut-partie-modal" id="debutPartieModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content">
+            <div class="modal-body">
+              <!-- Ecran d'attente d'un adversaire -->
+              <div class="attente-adversaire">
+                <h2>En attente d'un adversaire..</h2>
+                <div class="mt-5 d-flex justify-content-center gap-2">
+                  <div class="hexagone"></div>
+                  <div class="hexagone" style="animation-delay: 0.25s;"></div>
+                  <div class="hexagone" style="animation-delay: 0.50s;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+    </div>    
+
       <!-- FIN écran de jeu -->
     </div>
 
@@ -112,7 +131,7 @@
 
 <!-- scripts -->
 <script>
-  const MODE_BYPASS = true; // <-- Supprime l'authentification client afin de tester le plateau de jeu.
+  const MODE_BYPASS = false; // <-- Supprime l'authentification client afin de tester le plateau de jeu.
 </script>
 <script src="/public/assets/bootstrap.min.js"></script>
 <script src="/public/assets/d3.min.js"></script>

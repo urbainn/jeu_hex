@@ -111,7 +111,7 @@
                 text-align: right;
 
                 .fond-profil {
-                    background-color: #5cabfb;
+                    background-color: #5f9ddb;
                     top: -15rem;
                     right: -10rem;    
                 }
@@ -123,7 +123,7 @@
                 transform: translateX(-100%);
 
                 .fond-profil {
-                    background-color: #ff5c5c;
+                    background-color: #e65555;
                     bottom: -15rem;
                     left: -10rem;    
                 }
@@ -133,7 +133,6 @@
                 width: 20rem;
                 height: 30rem;
                 transform: rotate(-37deg);
-                background-color: #5cabfb;
                 position: absolute;
                 z-index: -1;
             }
@@ -155,6 +154,45 @@
             }
         }
     }
+}
+
+/** MODALS **/
+.modal {
+
+    &.debut-partie-modal {
+        .modal-content {
+            width: clamp(30vw, 30rem, 90vw);
+            height: clamp(25vh, 15rem, 90vh);
+
+            .modal-body {
+                display: flex;
+                align-items: center;
+                justify-content: center;   
+                
+                .hexagone { /* hexagones de l'animation d'attente. */
+                    height: 3rem;
+                    aspect-ratio: 1/cos(30deg);
+                    clip-path: polygon(50% -50%, 100% 50%, 50% 150%, 0 50%);
+                    background-color: #5f9ddb;
+                    /* Crédit: Temani Afif, https://css-shape.com/hexagon/ */
+                    animation: attente-joueur-hexagone 3s infinite;
+                }
+            }
+        }
+    }
+
+}
+
+/** MESSAGE VOLANT **/
+.message-volant {
+    position: fixed;
+    -webkit-text-stroke: 1px black;
+    font-size: 1.2rem;
+    font-weight: 900;
+    color: #000;
+    opacity: 0;
+    animation: message-volant 3s forwards normal;
+    cursor: default;
 }
 
 /** ANIMATIONS **/
@@ -181,5 +219,40 @@
     }
     to {
         opacity: 1;
+    }
+}
+
+@keyframes message-volant {
+    0% {
+        transform: translateY(0) translateX(-50%);;
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(-6rem) translateX(-50%);;
+        opacity: 0;
+    }
+}
+
+@keyframes attente-joueur-hexagone {
+    0% {
+        transform: translateY(0);
+    }
+    10% {
+        transform: translateY(-50%);
+    }
+    20% {
+        transform: translateY(0);
+        background-color: #e65555;
+    }
+    50% {
+        transform: translateY(0);
+        background-color: #e65555;
+    }
+    60% {
+        transform: translateY(-50%);
+    }
+    70% {
+        transform: translateY(0);
+        background-color: #5f9ddb;
     }
 }

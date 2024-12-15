@@ -10,7 +10,11 @@ const socketCallbacks = {
     creerServeur: () => {}
 }
 
-// Envoyer un message au travers du socket
+/**
+ * Envoyer un message au travers du socket
+ * @param {String} nomPacket Nom du packet à envoyer
+ * @param {Object} data Données à envoyer
+ */
 async function envoyerMessage(nomPacket, data) {
     await socket.emit(nomPacket, data);
 }
@@ -47,8 +51,34 @@ socket.on('serveurUpdate', (data) => {
 
 // Reçoit la liste des serveurs actifs
 socket.on('serveurListe', (data) => {
-    console.log('liste recue', data);
     socketCallbacks.serveurListe(data);
+});
+
+// Le serveur envoit un message au joueur.
+socket.on('message', (data) => {
+    const typeAffichage = data.affichage; // 0 = message volant, 1 = popup/alert
+    const message = data.message;
+    const couleur = data.couleur || '#fff';
+
+    if (typeAffichage === 0) {
+        afficherMessageVolant(message, couleur);
+    } else {
+        alert(message);
+    }
+});
+
+// Un joueur a joué un coup
+socket.on('coupJoue', (data) => {
+    joueurCoup(data);
+});
+
+// Un message de chat est reçu
+socket.on('chat', (data) => {
+    messageChatRecu(data);
+});
+
+socket.on('partieAccepte', (data) => {
+    rejoindrePartieAcceptee(data);
 });
 
 /**

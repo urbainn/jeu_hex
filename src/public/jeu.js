@@ -4,12 +4,28 @@ const ecranJeu = document.getElementById('jeuHexScreen');
 
 // Variables de jeu
 let estSpectateur = false;
-let joueurCouleur = null; // null = spectateur, 0 = rouge, 1 = bleu
+let joueurCouleur = null; // null = spectateur/indéterminé, 0 = rouge, 1 = bleu
 let tourJoueur = 0; // 0 = rouge, 1 = bleu
+let listeSpectateurs = [];
+
+// Tabliers
+let tablierRouge = new Array(11).fill(false).map(() => new Array(11).fill(false));
+let tablierBleu = new Array(11).fill(false).map(() => new Array(11).fill(false));
 
 // Elements du jeu
 const profilJoueurRouge = document.getElementById('profilJoueurRouge');
 const profilJoueurBleu = document.getElementById('profilJoueurBleu');
+const discussionChat = document.getElementById('chat-discussion');
+
+// Modals
+const debutPartieModal = new bootstrap.Modal(document.getElementById('debutPartieModal'), { backdrop: 'static' });
+
+// Répertorier la position de la souris sur la page
+let [mouseX, mouseY] = [0, 0];
+document.addEventListener('mousemove', (event) => {
+    mouseX = event.clientX;
+    mouseY = event.clientY;
+});
 
 /**
  * Retourne les coordonnées d'un hexagone de rayon donné
@@ -124,7 +140,7 @@ function creerTablier(nbLignes, nbColonnes, rayon, estLosange, corpsSvg, hexCall
                     else repereD = `M${x1},${y1}L${x2},${y2}L${x2},${y2+20}L${x1},${y1+20}Z`;
 
                     corpsSvg.append("path").attr("d", repereD).attr("fill", "#212529")
-                        .transition().duration(400).delay(500 + l * 70 + c * 70).attr("fill", coteI === 0 ? "#ff5050" : "#c64a4a")
+                        .transition().duration(400).delay(500 + l * 70 + c * 70).attr("fill", coteI === 0 ? "#ff5050" : "#c64a4a");
                 }
             }
             if (c % (nbColonnes-1) === 0) {
@@ -253,17 +269,195 @@ async function afficherEcranJeu() {
             if (d.target.id.startsWith('hex_jeu_')) {
 
                 // est-ce le tour du joueur ?
-                if (tourJoueur !== joueurCouleur) return;
+                if (tourJoueur !== joueurCouleur) {
+                    afficherMessageVolant('Ce n\'est pas votre tour !', '#fff');
+                    return;
+                }
 
-                d3.select('#' + d.target.id)
-                    .transition()
-                    .duration(100)
-                    .attr('fill', joueurCouleur === 0 ? '#ff5c5c' : '#5cabfb')
-                    .attr('stroke', joueurCouleur === 0 ? '#b54343' : '#3c76b0');
+                jouerCoup(d.target.id);
 
             }
         });
     }
+
+}
+
+/**
+ * Affiche un message 'volant' à la position de la souris du joueur
+ * @param {String} message Message à afficher
+ * @param {String} couleur Couleur du message
+ */
+function afficherMessageVolant(message, couleur) {
+    
+    // Créer un élément de message
+    const messageElement = document.createElement('div');
+    messageElement.classList.add('message-volant');
+    messageElement.style.color = couleur;
+    messageElement.style.left = mouseX + 'px';
+    messageElement.style.top = (mouseY - 25) + 'px';
+    messageElement.innerText = message;
+
+    // Ajouter l'élément au body
+    document.body.appendChild(messageElement);
+
+    // Supprimer l'élément après 3 secondes
+    setTimeout(() => {
+        messageElement.remove();
+    }, 3000);
+
+}
+
+
+/**
+ * FONCTIONS D'AFFICHAGE
+ * Fonctions appellées pour afficher des éléments sur l'interface
+ */
+
+/**
+ * La demande de rejoindre une partie a été acceptée.
+ * Met à jour l'interface pour afficher les informations de la partie.
+ * @param {Object} data Données de la partie
+ */
+function rejoindrePartieAcceptee(data) {
+    const partie = data.partie;
+    estSpectateur = data.spectateur;
+
+    console.log('Données de la partie : ', partie);
+
+    // Les couleurs des joueurs n'ont pas encore été déterminées
+    if (!partie.rouge) {
+        mettreAJourPseudos('Joueur Rouge', 'Joueur Bleu');
+    } else {
+        mettreAJourPseudos(partie.rouge, partie.bleu);
+        mettreAJourTour(partie.numeroTour);
+    } 
+
+    tourJoueur = partie.tourDeCouleur;
+    listeSpectateurs = partie.spectateurs;
+
+    // Afficher l'écran de jeu
+    afficherEcranJeu();
+
+    // Laisser les animations d'affichage du jeu se terminer,
+    // puis afficher le modal d'attente de joueur/début de partie
+    setTimeout(() => {
+        debutPartieModal.show();
+    }, 4000);
+}
+
+/**
+ * Mettre à jour le pseudo des joueurs
+ * @param {String} pseudoRouge Pseudo du joueur rouge
+ * @param {String} pseudoBleu Pseudo du joueur bleu
+ */
+function mettreAJourPseudos(pseudoRouge, pseudoBleu) {
+    document.getElementById('pseudoJoueurRouge').innerText = pseudoRouge;
+    document.getElementById('pseudoJoueurBleu').innerText = pseudoBleu;
+}
+
+/**
+ * Mettre à jour les informations du tour courant
+ * @param {Number} numeroTour Numéro du tour (depuis le début de la partie, 1 = premier tour)
+ */
+function mettreAJourTour(numeroTour) {
+    document.getElementById('toursJoues').innerText = numeroTour;
+}
+
+
+/**
+ * FONCTIONS DE JEU
+ * Fonctions appellées au cours du jeu, pour gérer les interactions serveur/joueur
+ */
+
+/**
+ * Un message de chat est reçu.
+ * @param {Object} data Données du message
+ */
+function messageChatRecu(data) {
+    const message = data.message;
+    const couleur = data.couleur || '#fff'; // Couleur du nom du joueur
+    const systeme = !!data.systeme; // Le message est-il une notification système ?
+    const pseudo = data.pseudo;
+
+    if (message === '' || message === null || message === undefined) return;
+
+    // Créer l'élément contenant le message
+    const messageElement = document.createElement('div');
+    messageElement.classList.add('chat-msg');
+    
+    if (pseudo && !systeme) {
+
+        // Pseudo
+        const pseudoElement = document.createElement('span');
+        pseudoElement.style.color = couleur;
+        pseudoElement.innerText = pseudo + ' : ';
+        messageElement.appendChild(pseudoElement);
+
+    } else if (systeme) {
+
+        // Message système
+        messageElement.classList.add('chat-msg-systeme');
+    
+    }
+
+    // Contenu du message
+    const contenuElement = document.createElement('span');
+    contenuElement.innerText = message;
+
+    // Assemblage
+    messageElement.appendChild(contenuElement);
+
+}
+
+/**
+ * Le joueur joue un coup
+ * @param {Number} colonne (x)
+ * @param {Number} ligne (y)
+ * @returns {Boolean} Renvoit vrai si le coup est valide, faux sinon
+ */
+async function jouerCoup(colonne, ligne) {
+
+    // S'assurer que le coup est valide
+    if (colonne < 0 || colonne >= 11 || ligne < 0 || ligne >= 11) {
+        afficherMessageVolant('Coup invalide', '#ff5c5c');
+        return false;
+    }
+
+    // Envoyer le coup au serveur
+    await envoyerMessage('coupJoue', {
+        colonne: colonne,
+        ligne: ligne
+    });
+
+    // Le reste (affichage, etc.) est executé lors de la réception de la réponse du serveur.
+
+}
+
+/**
+ * Un joueur vient de jouer un coup.
+ * Executé lors de la réception de l'événement 'joueurCoup' du serveur.
+ */
+function joueurCoup(data) {
+    const colonne = data.colonne;
+    const ligne = data.ligne;
+    const couleur = data.couleur; // 0 = rouge, 1 = bleu
+
+    // Mettre à jour l'interface
+    const hexa = d3.select('#hex_jeu_' + ligne + '_' + colonne)
+        .transition() /* animation: grossissement de l'hexagone, puis retour à la normale */
+        .duration(300)
+        .attr('fill', couleur === 0 ? '#ff5050' : '#5cabfb')
+        .attr('transform', 'scale(1.1)');
+
+    setTimeout(() => {
+        hexa.transition()
+            .duration(300)
+            .attr('fill', couleur === 0 ? '#ff5050' : '#5cabfb')
+            .attr('transform', 'scale(1)');
+    }, 300);
+
+    // Mettre à jour le tour du joueur
+    tourJoueur = (tourJoueur + 1) % 2;
 
 }
 

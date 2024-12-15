@@ -31,6 +31,16 @@ class Joueur {
         return Joueur._prochainJoueurId++;
     }
 
+    /**
+     * Envoyer un message/notification visuelle au joueur.
+     * @param {String} message Message à envoyer
+     * @param {Number} typeAffichage Type d'affichage du message (0 = message volant, 1 = popup/alert)
+     * @param {String} couleur Couleur du message
+     */
+    envoyerNotification(message, typeAffichage, couleur = '#fff') {
+        this.socket.emit('message', { message, typeAffichage, couleur });
+    }
+
 }
 
 module.exports = Joueur;

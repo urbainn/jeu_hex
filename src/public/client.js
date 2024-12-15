@@ -54,6 +54,9 @@ creerTablier(fondLignesNb, fondColonnesNb, 40, false, svgFondHexa,
     })
 );
 
+/**
+ * Démarre une animation de fond pour l'écran d'accueil (effet cascade)
+ */
 function animationFondAccueil() {
 
     // Anime l'hexagone en position (c; l)
@@ -99,7 +102,10 @@ function animationFondAccueil() {
 
 animationFondAccueil();
 
-// Créer une carte HTML pour un serveur
+/**
+ * Créer une carte HTML pour un serveur
+ * @param {Object} serv données sur le serveur/la partie
+ */
 function creerCarteServeur(serv) {
 
     const card = document.createElement('div');
@@ -111,7 +117,7 @@ function creerCarteServeur(serv) {
     cardBody.classList.add('card-body');
     const cardTitle = document.createElement('h5');
     cardTitle.classList.add('cart-title');
-    cardTitle.innerText = 'Partie par ' + serv.joueur1.username;
+    cardTitle.innerText = 'Partie par ' + serv.createur;
     const cardText = document.createElement('p');
     cardText.classList.add('card-text');
     cardText.id = 'carteTexteServeur_' + serv.id;
@@ -126,19 +132,29 @@ function creerCarteServeur(serv) {
 
     listeServeurs.appendChild(card);
 
+    // Lorsque l'utilisateur clique sur la carte, demander à rejoindre la partie
+    card.addEventListener('click', () => {
+        socket.emit('rejoindrePartie', { id: serv.id });
+    });
+
 }
 
-// Modifier la carte HTML d'un serveur
+/**
+ * Modifier/mettre à jour la carte HTML d'un serveur
+ * @param {Object} serv données sur le serveur/la partie
+ * @param {HTMLElement} card carte HTML du serveur
+ * @param {HTMLElement} cardText
+ */
 function modifierCarteServeur(serv, card = null, cardText = null) {
     if (!card) card = document.getElementById('carteServeur_' + serv.id);
     if (!card) card = document.getElementById('carteTextServeur_' + serv.id);
-    if(serv.joueur2 === null) {
+    if(serv.nbJoueurs === 1) {
         card.classList.add('border-primary', 'attente');
         cardText.innerText = '1/2 joueurs. Cliquez pour rejoindre.'
     } else {
         card.classList.remove('border-primary', 'attente');
         card.classList.add('complet');
-        cardText.innerText = 'Partie en cours. ' + serv.spectateurs.length + ' spectateurs.';
+        cardText.innerText = 'Partie en cours. ' + serv.nbSpectateurs + ' spectateurs.';
     }
 }
 
