@@ -38,7 +38,7 @@ class Joueur {
      * @param {String} couleur Couleur du message
      */
     envoyerNotification(message, typeAffichage, couleur = '#fff') {
-        this.socket.emit('message', { message, typeAffichage, couleur });
+        this.socket.emit('notif', { message, affichage: typeAffichage, couleur });
     }
 
 }

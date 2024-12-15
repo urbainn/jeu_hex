@@ -32,6 +32,9 @@ class Partie {
     /* Liste des spectateurs */
     spectateurs = [];
 
+    /* Horodatage du début de la partie, null si la partie n'a pas encore commencé */
+    debutPartieTimestamp = null;
+
     /* Identifiant de la prochaine partie */
     static _prochainePartieId = 0;
     
@@ -90,17 +93,26 @@ class Partie {
         if (this.spectateurs.find(spectateur => spectateur.id === joueur.id)) return;
 
         if (this.joueur2 === null) {
+
             // Est le deuxième joueur
             this.joueur2 = joueur;
+
+            // Démarrer la partie
+            this.demarrerPartie();
+
         } else {
+
             // Est un spectateur
-            this.spectateurs.push(joueur);
             this.broadcast('spectateurRejoint', { pseudo: joueur.username });
+            this.spectateurs.push(joueur);
+
         }
 
         // Mettre à jour les informations du joueur
         joueur.partie = this;
-        joueur.socket.emit('partieAccepte', { partie: this.serialiser(), spectateur: this.joueur2 !== joueur }); // changé this.joueur2 === joueur à cause ligne 94
+        joueur.socket.emit('partieAccepte', { partie: this.serialiser(), spectateur: this.joueur2 !== joueur });
+        joueur.socket.broadcast.emit('serveurUpdate', this.serialiser());
+        this.envoyerMessageSysteme(joueur.username + ' a rejoint la partie.');
 
     }
 
@@ -109,16 +121,19 @@ class Partie {
      * @param {Joueur} joueur Joueur qui quitte la partie
      */
     joueurQuitte(joueur) {
-
-        console.log('Un joueur quitte la partie.');
         
-        // Le joueur était un spectateur
+        // Le joueur était un spectateur?
         const indexSpectateur = this.spectateurs.findIndex(spectateur => spectateur.id === joueur.id);
         if (indexSpectateur !== -1) {
+
+            // Retirer le spectateur de la liste locale
             this.spectateurs.splice(indexSpectateur, 1);
-            this.broadcast('spectateurQuitte', { id: joueur.id });
+            this.broadcast('spectateurQuitte', { pseudo: joueur.username });
+            joueur.socket.broadcast.emit('serveurUpdate', this.serialiser());
             return;
+
         } else {
+
             // Le joueur était un joueur
             if (this.joueur1.id === joueur.id) {
                 this.joueur1 = this.joueur2;
@@ -126,19 +141,19 @@ class Partie {
             } else {
                 this.joueur2 = null;
             }
+
+            // Un des deux joueurs vient de quitter. Mettre fin à la partie.
+            this.broadcast('abandonPartie', { raison: 'Un joueur a quitté la partie.' });
+            joueur.socket.broadcast.emit('serveurSupprime', { id: this.id });
+            this.finPartie();
+
         }
-
-        // Un des deux joueurs vient de quitter. Mettre fin à la partie.
-        this.broadcast('partieAnnulee', { raison: 'Un joueur a quitté la partie.' });
-        this.finPartie();
-
     }
 
     /**
      * Fin de la partie (nettoyage).
      */
     finPartie() {
-        console.log('FIN DE LA PARTIE');
         this.app.parties.delete(this.id);
         if (this.joueur1) this.joueur1.partie = null;
         if (this.joueur2) this.joueur2.partie = null;
@@ -153,11 +168,24 @@ class Partie {
 
         // Déterminer aléatoirement le joueur qui commence (ROUGE)
         this.joueurRouge = Math.random() > 0.5 ? this.joueur1 : this.joueur2;
-        // ce broadcast n'est pas récup donc les joueurs n'ont pas de couleurs
-        this.broadcast('debutPartie', {
-            rouge: joueurRouge.id,
-            bleu: joueurRouge === this.joueur1 ? this.joueur2.id : this.joueur1.id
-        });
+        this.joueurBleu = this.joueurRouge === this.joueur1 ? this.joueur2 : this.joueur1;
+
+        // Envoyer un paquet allégé à chaque spectateur
+        this.spectateurs.forEach(spectateur => spectateur.socket.emit('debutPartie', {
+            rouge: this.joueurRouge.username,
+            bleu: this.joueurBleu.username
+        }));
+
+        // Envoyer un paquet complet aux joueurs
+        // Contient le role de chaque joueur (ROUGE ou BLEU)
+        [this.joueur1, this.joueur2].forEach(joueur => joueur.socket.emit('debutPartie', {
+            rouge: this.joueurRouge.username,
+            bleu: this.joueurBleu.username,
+            couleur: joueur === this.joueurRouge ? 0 : 1
+        }));
+
+        this.debutPartieTimestamp = Date.now() + 15000; // +15s pour compenser les animations coté client
+
     }
 
     /**
@@ -183,7 +211,7 @@ class Partie {
             return joueur.envoyerNotification('Ce n\'est pas votre tour.', 0, '#ff5c5c');
 
         // Vérifier que la case n'a pas déjà été jouée
-        if (this.tablierBleu[ligne][colonne] !== null || this.tablierRouge[ligne][colonne] !== null)
+        if (this.tablierBleu[ligne][colonne] || this.tablierRouge[ligne][colonne])
             return joueur.envoyerNotification('Case déjà jouée.', 0, '#ff5c5c');
 
         // Jouer le coup
@@ -193,11 +221,104 @@ class Partie {
             this.tablierBleu[ligne][colonne] = true;
         }
 
-        this.broadcast('coupJoue', { ligne, colonne, couleur: (this.tour - 1) % 2 });
+        this.broadcast('coupJoue', { ligne, colonne, couleur: (this.tour - 1) % 2, total: this.tour });
+
+        // Vérifier si le joueur a gagné
+        const victoire = this.verifierVictoire((this.tour - 1) % 2);
+        if (victoire) {
+            this.broadcast('finPartie', {
+                gagnant: {
+                    couleur: (this.tour - 1) % 2,
+                    pseudo: joueur.username
+                },
+                coupsJoues: this.tour,
+                dureePartie: Math.round((Date.now() - this.debutPartieTimestamp) / 1000),
+                spectateurs: this.spectateurs.length
+            });
+            this.finPartie();
+            return true;
+        }
 
         this.tour++;
         return true;
 
+    }
+
+    /**
+     * Vérifier si les conditions de victoire sont remplies por un joueur.
+     * @param {Number} couleur Couleur du joueur (0 = ROUGE, 1 = BLEU)
+     * @returns {Boolean} true si le joueur a gagné, false sinon
+     */
+    verifierVictoire(couleur){
+        let tablier;
+        let indicePos; // Axe à vérifier pour la victoire (0 = y, 1 = x)
+        let aVisiter = [];
+        let visite = new Set();
+        let victoire = false;
+        
+        if (couleur === 1) {
+            tablier = this.tablierBleu;
+            indicePos = 1;
+            for (let y = 0; y < tablier.length; y++) {
+                if (tablier[y][0]) aVisiter.push([y, 0]);
+            }
+        } else {
+            tablier = this.tablierRouge;
+            indicePos = 0;
+            for (let x = 0; x < tablier.length; x++) {
+                if (tablier[0][x]) aVisiter.push([0, x]);
+            }
+        }
+        
+        // Algorithme de recherche en profondeur
+        while (aVisiter.length != 0) {
+
+            let point = aVisiter.shift();
+            let pointString = point[0] + ',' + point[1];
+            visite.add(pointString);
+
+            if(point[indicePos] == tablier.length - 1) {
+
+                // Victoire !
+                victoire = true;
+                break;
+            }
+    
+            // Ajour des voisins à la liste des points à visiter
+            [
+                // Position relative des voisins
+                /* nord */ [0, -1], /* sud */ [0, 1],
+                /* ouest */ [-1, 0], /* ouest */ [1, 0],
+                /* nord-ouest */ [-1, 1], /* sud-est */ [1, -1]
+            ].forEach(([x,y]) => {
+
+                const voisinX = point[1]+x;
+                const voisinY = point[0]+y;
+
+                // La case est valide, et non visitée
+                if(voisinX >= 0 && voisinX < tablier.length
+                    && voisinY >= 0 && voisinY < tablier.length
+                    && tablier[voisinY][voisinX]
+                    && !visite.has(voisinY + ',' + voisinX)) {
+                    
+                        // Ajouter le voisin à la liste des points à visiter
+                        aVisiter.push([voisinY, voisinX]);
+                    }
+            });
+        }
+
+        return victoire;
+    }
+
+    /**
+     * Envoyer un message "système" dans le chat de la partie.
+     * @param {String} message Message à envoyer
+     */
+    envoyerMessageSysteme(message) {
+        this.broadcast('chat', {
+            message,
+            systeme: true
+        });
     }
 
     /**
@@ -217,7 +338,8 @@ class Partie {
             },
             numeroTour: this.tour,
             tourDeCouleur: (this.tour - 1) % 2,
-            spectateurs: this.spectateurs.map(spectateur => spectateur.username)
+            spectateurs: this.spectateurs.map(spectateur => spectateur.username),
+            debutDepuis: this.debutPartieTimestamp ? Math.round((Date.now() - this.debutPartieTimestamp) / 1000) : null
         }
     }
 

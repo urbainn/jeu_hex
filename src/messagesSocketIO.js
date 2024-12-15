@@ -58,12 +58,11 @@ module.exports = function messagesSocketsIO(socket, app) {
         if (!joueur || joueur.partie !== null) return;
 
         // Récupérer la partie
-        const partie = app.parties.get(data.id);
+        partie = app.parties.get(data.id);
         if (!partie) return joueur.envoyerNotification('La partie n\'existe pas.', 1);
 
         // Rejoindre la partie
         partie.joueurRejoint(joueur);
-        partie.demarrerPartie(); // n'est présent nulle part donc je l'ai mis ici pour test ?
     });
 
     /** Un joueur joue un coup */
@@ -83,6 +82,20 @@ module.exports = function messagesSocketsIO(socket, app) {
         // Jouer le coup
         partie.jouerCoup(joueur, ligne, colonne);
 
+    });
+
+    /** Message dans le chat */
+    socket.on('chat', data => {
+        if (!joueur || !partie) return;
+
+        // Broadcaster le message
+        partie.broadcast('chat', {
+            pseudo: joueur.username,
+            message: data.message,
+            systeme: false,
+            couleur: joueur === partie.joueurRouge ? '#e65555' :
+                joueur === partie.joueurBleu ? '#5f9ddb' : '#828282'
+        });
     });
 
 }

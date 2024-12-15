@@ -14,11 +14,28 @@ let tablierBleu = new Array(11).fill(false).map(() => new Array(11).fill(false))
 
 // Elements du jeu
 const profilJoueurRouge = document.getElementById('profilJoueurRouge');
+const fondProfilRouge = document.getElementById('fondProfilRouge');
+const timerJoueurRouge = document.getElementById('timerJoueurRouge');
+
 const profilJoueurBleu = document.getElementById('profilJoueurBleu');
-const discussionChat = document.getElementById('chat-discussion');
+const fondProfilBleu = document.getElementById('fondProfilBleu');
+const timerJoueurBleu = document.getElementById('timerJoueurBleu');
+
+const discussionChat = document.getElementById('discussionContainer');
+const timerPartie = document.getElementById('timerPartie');
+const joueursContainer = document.getElementById('joueursContainer');
+const spectateursListe = document.getElementById('spectateursListe');
+const spectateursNbr = document.getElementById('spectateursNbr');
 
 // Modals
 const debutPartieModal = new bootstrap.Modal(document.getElementById('debutPartieModal'), { backdrop: 'static' });
+const finPartieModal = new bootstrap.Modal(document.getElementById('finPartieModal'), { backdrop: 'static' });
+const abandonPartieModal = new bootstrap.Modal(document.getElementById('abandonPartieModal'), { backdrop: 'static' });
+
+// Timers
+let intervalleTimerRouge = null;
+let intervalleTimerBleu = null;
+let intervalleTimerPartie = null;
 
 // Répertorier la position de la souris sur la page
 let [mouseX, mouseY] = [0, 0];
@@ -115,7 +132,7 @@ function creerTablier(nbLignes, nbColonnes, rayon, estLosange, corpsSvg, hexCall
             d += "Z";
 
             // Si en extrêmité de tablier; dessiner un repère de position
-            if (l % (nbLignes - 1) === 0) {
+            if (estLosange && l % (nbLignes - 1) === 0) {
 
                 // Dessiner les repères au dessus et en dessous du tablier
                 let repereD;
@@ -143,7 +160,7 @@ function creerTablier(nbLignes, nbColonnes, rayon, estLosange, corpsSvg, hexCall
                         .transition().duration(400).delay(500 + l * 70 + c * 70).attr("fill", coteI === 0 ? "#ff5050" : "#c64a4a");
                 }
             }
-            if (c % (nbColonnes-1) === 0) {
+            if (estLosange && c % (nbColonnes-1) === 0) {
 
                 // Dessiner le repère sur les bords latéraux du tablier
                 let repereD;
@@ -196,8 +213,10 @@ function creerTablier(nbLignes, nbColonnes, rayon, estLosange, corpsSvg, hexCall
 
 /**
  * Basculer en 'mode jeu'. Cache l'écran de sélection de serveur, et affiche l'écran de jeu.
+ * @param {Array} tablierRouge Tableau de jeu du joueur rouge (true = hexagone occupé, false = case libre)
+ * @param {Array} tablierBleu Tableau de jeu du joueur bleu (true = hexagone occupé, false = case libre)
  */
-async function afficherEcranJeu() {
+async function afficherEcranJeu(tablierRouge = [], tablierBleu = []) {
     // Cacher l'écran de sélection de serveur (transition fade-out)
     ecranSelectionServeur.classList.add('fade-out');
     await new Promise(r => setTimeout(r, 490));
@@ -229,13 +248,18 @@ async function afficherEcranJeu() {
     const rayonOpti = Math.min(rayonOptiX, rayonOptiY);
 
     // Dessiner le tablier de jeu (en losange)
+    const contientDonnesTablier = tablierRouge.length > 0 && tablierBleu.length > 0;
     const tablierSVG = d3.select('#tablierSvg');
-    //dessinerReperesEquipe(11, 11, rayonOpti, tablierSVG, [0, rayonOpti]);
     const dimensionsTablier = creerTablier(
         11, 11, rayonOpti, // Tablier de 11x11 cases 
         true, // ..en forme de losange
         tablierSVG,
         ((hexa, l, c) => {
+
+            // Couleur de remplissage de l'hexagone. Null = laisser vide
+            const fill = !contientDonnesTablier ? null :
+                tablierRouge[l][c] ? '#e65555' : tablierBleu[l][c] ? '#5f9ddb' : null;
+
             hexa.attr('stroke', '#212529')
                 .attr('fill', '#212529')
                 .attr('stroke-width', '3')
@@ -244,7 +268,7 @@ async function afficherEcranJeu() {
                 .duration(500)
                 .delay(l * 75 + c * 75) // Affichage progressif des hexagones (animation)
                 .attr('stroke', '#9099a2')
-                .attr('fill', (l % 2 === 0 ? c : c+1) % 2 === 0 ? '#ffffff15' : '#212529')
+                .attr('fill', fill === null ? (l % 2 === 0 ? c : c+1) % 2 === 0 ? '#ffffff15' : '#212529' : fill);
         }), [0, rayonOpti]
     );
 
@@ -272,7 +296,9 @@ async function afficherEcranJeu() {
                     afficherMessageVolant('Ce n\'est pas votre tour !', '#fff');
                     return;
                 }
-                jouerCoup(d.target.id);
+
+                const coords = d.target.id.split('_').slice(2).map(Number);
+                jouerCoup(coords[1], coords[0]);
 
             }
         });
@@ -319,12 +345,9 @@ function afficherMessageVolant(message, couleur) {
 function rejoindrePartieAcceptee(data) {
     const partie = data.partie;
     estSpectateur = data.spectateur;
-    
-
-    console.log('Données de la partie : ', partie);
 
     // Les couleurs des joueurs n'ont pas encore été déterminées
-    if (!partie.rouge) {
+    if (!partie.rouge || !estSpectateur) {
         mettreAJourPseudos('Joueur Rouge', 'Joueur Bleu');
     } else {
         mettreAJourPseudos(partie.rouge, partie.bleu);
@@ -332,16 +355,27 @@ function rejoindrePartieAcceptee(data) {
     } 
 
     tourJoueur = partie.tourDeCouleur;
-    listeSpectateurs = partie.spectateurs;
 
     // Afficher l'écran de jeu
-    afficherEcranJeu();
+    if (estSpectateur) afficherEcranJeu(partie.tabliers.rouge, partie.tabliers.bleu);
+    else afficherEcranJeu();
 
     // Laisser les animations d'affichage du jeu se terminer,
     // puis afficher le modal d'attente de joueur/début de partie
-    setTimeout(() => {
-        debutPartieModal.show(); // n'est hide nulle part (va avec le Debutpartie)
-    }, 4000);
+    if (!estSpectateur) {
+        setTimeout(() => {
+            debutPartieModal.show();
+            document.getElementById('modalEcranAttenteAdversaire').classList.remove('d-none');
+        }, 4000);
+    } else {
+
+        // Est spectateur. Mettre à jour l'interface pour afficher le mode spectateur
+        intervalleTimerPartie = afficherTimer(timerPartie, partie.debutDepuis);
+
+        for (let spectateur of partie.spectateurs) {
+            spectateurRejoint({ pseudo: spectateur });
+        }
+    }
 }
 
 /**
@@ -362,11 +396,219 @@ function mettreAJourTour(numeroTour) {
     document.getElementById('toursJoues').innerText = numeroTour;
 }
 
+/**
+ * Mettre à jour l'affichage pour indiquer que c'est le tour d'un joueur
+ * @param {Number} couleur Couleur du joueur (0 = rouge, 1 = bleu) dont c'est le tour
+ */
+function afficherTourDe(couleur) {
+    if (couleur === 0) {
+        // C'est le tour du joueur rouge
+        fondProfilRouge.style.opacity = '1';
+        fondProfilBleu.style.opacity = '0.5';
+        fondProfilRouge.style.left = '-10rem';
+        fondProfilBleu.style.right = '-15rem';
+    } else {
+        // C'est le tour du joueur bleu
+        fondProfilRouge.style.opacity = '0.5';
+        fondProfilBleu.style.opacity = '1';
+        fondProfilRouge.style.left = '-15rem';
+        fondProfilBleu.style.right = '-10rem';
+    }
+}
+
+/**
+ * Afficher un timer dans l'élément spécifié (de type 'span')
+ * @param {HTMLElement} timerElement Element dans lequel afficher le timer
+ * @param {Number} debut Nombre de secondes à ajouter au timer de départ
+ */
+function afficherTimer(timerElement, debut = 1) {
+    let temps = debut;
+
+    // piste d'amélioration : utiliser un intervalle global qui met à jour tous les timers
+    return setInterval(() => {
+        timerElement.innerText = formatTemps(temps);
+        temps++;
+    }, 1000);
+}
+
+/**
+ * Renvoit un temps en secondes sous forme de chaîne lisible (mm:ss)
+ * @param {Number} temps Temps en secondes
+ * @returns {String} Temps formaté
+ */
+function formatTemps(temps) {
+    return Math.floor(temps / 60).toString().padStart(2, '0') + ':' + (temps % 60).toString().padStart(2, '0');
+}
+
+/**
+ * Un nouveau spectateur rejoint la partie
+ * @param {String} data Données du spectateur (pseudo)
+ */
+function spectateurRejoint(data) {
+    const pseudo = data.pseudo;
+    listeSpectateurs.push(pseudo);
+
+    // Afficher la liste des spectateurs
+    if (listeSpectateurs.length === 1) {
+        joueursContainer.classList.remove('d-none');
+    }
+
+    // Ajouter le spectateur à la liste
+    const spectateurElm = document.createElement('div');
+    spectateurElm.classList.add('spectateur-pseudo');
+    spectateurElm.innerText = pseudo;
+    spectateursListe.appendChild(spectateurElm);
+
+    // Mettre à jour le nombre de spectateurs
+    spectateursNbr.innerText = listeSpectateurs.length;
+}
+
+/**
+ * Un spectateur quitte la partie
+ * @param {String} data Données du spectateur (pseudo)
+ */
+function spectateurQuitte(data) {
+    const pseudo = data.pseudo;
+    const index = listeSpectateurs.indexOf(pseudo);
+
+    // Retirer le spectateur de la liste
+    if (index !== -1) {
+        listeSpectateurs.splice(index, 1);
+        spectateursListe.children[index].remove();
+    }
+
+    // Mettre à jour le nombre de spectateurs
+    spectateursNbr.innerText = listeSpectateurs.length;
+
+    // Cacher la liste des spectateurs si aucun spectateur n'est présent
+    if (listeSpectateurs.length === 0) {
+        joueursContainer.classList.add('d-none');
+    }
+
+    // Supprimer le noeud DOM du spectateur dans la liste
+    for (let i = 0; i < spectateursListe.children.length; i++) {
+        if (spectateursListe.children[i].innerText === pseudo) {
+            spectateursListe.children[i].remove();
+            break;
+        }
+    }
+
+}
+
 
 /**
  * FONCTIONS DE JEU
  * Fonctions appellées au cours du jeu, pour gérer les interactions serveur/joueur
  */
+
+/**
+ * La partie commence.
+ * @param {Object} data Données sur les couleurs des joueurs
+ */
+async function debutPartie(data) {
+    const pseudoRouge = data.rouge;
+    const pseudoBleu = data.bleu;
+    const selfCouleur = data.couleur; // 0 = rouge, 1 = bleu
+
+    // Element de contenu du modal
+    const modalContentElm = document.getElementById('modalContentDebutPartie');
+    modalContentElm.style.backgroundColor = '';
+
+    // Attendre 4 secondes pour se synchroniser avec l'animation de début de partie
+    // de l'utilisateur adverse (attendre que les deux soient sur le même écran)
+    await new Promise(r => setTimeout(r, 4100));
+
+    // Afficher l'écran 'adversaire trouvé !'
+    const attAdversaireEcran = document.getElementById('modalEcranAttenteAdversaire');
+    const advTrouvEcran = document.getElementById('modalEcranAdversaireTrouve');
+    document.getElementById('adversaireNom').innerText = selfCouleur === 0 ? pseudoBleu : pseudoRouge;
+    attAdversaireEcran.classList.add('d-none');
+    advTrouvEcran.classList.remove('d-none');
+
+    // Au bout de 3 secondes, afficher l'écran 'vous jouez en tant que...'
+    await new Promise(r => setTimeout(r, 3000));
+
+    const joueurCouleurEcran = document.getElementById('modalEcranVousJouezCouleur');
+    advTrouvEcran.classList.add('d-none');
+    joueurCouleurEcran.classList.remove('d-none');
+
+    const txtCouleurJoueur = document.getElementById('ecranTxtCouleurJoueur');
+    const txtRoleJoueur = document.getElementById('ecranTxtRoleJoueur');
+    txtCouleurJoueur.innerText = selfCouleur === 0 ? 'ROUGE' : 'BLEU';
+    txtRoleJoueur.innerText = selfCouleur === 0 ? 'Vous jouez le premier coup !' : 'Votre adversaire joue le premier coup.';
+
+    // Cacher les textes
+    txtCouleurJoueur.style.opacity = '0';
+    txtRoleJoueur.style.opacity = '0';
+
+    // Révéler la couleur du joueur après 2 secondes
+    await new Promise(r => setTimeout(r, 2000));
+
+    modalContentElm.style.backgroundColor = selfCouleur === 0 ? '#d14d4d' : 'rgb(72, 133, 196)';
+    txtCouleurJoueur.style.opacity = '1';
+    txtRoleJoueur.style.opacity = '0.7';
+
+    joueurCouleur = selfCouleur;
+
+    // Fermer le modal au bout de 5 secondes
+    setTimeout(() => {
+        debutPartieModal.hide();
+        joueurCouleurEcran.classList.add('d-none');
+
+        // Mettre à jour l'interface
+        intervalleTimerRouge = afficherTimer(timerJoueurRouge);
+        intervalleTimerPartie = afficherTimer(timerPartie);
+        mettreAJourPseudos(pseudoRouge, pseudoBleu);
+        afficherTourDe(0);
+
+    }, 5000);
+
+}
+
+/**
+ * La partie est terminée. (un joueur a gagné; voir 'abandonPartie' pour un abandon)
+ * @param {Object} data Données sur la fin de la partie
+ */
+function finPartie(data) {
+    const gagnant = data.gagnant;
+
+    // Arrêter les timers
+    clearInterval(intervalleTimerRouge);
+    clearInterval(intervalleTimerBleu);
+    clearInterval(intervalleTimerPartie);
+
+    // Afficher le modal de fin de partie
+    finPartieModal.show();
+
+    // Mettre à jour le contenu du modal
+    const coupsJouesElm = document.getElementById('statCoupsJoues');
+    const dureePartieElm = document.getElementById('statTempsJeu');
+    const spectateursElm = document.getElementById('statSpectateurs');
+
+    coupsJouesElm.innerText = data.coupsJoues;
+    dureePartieElm.innerText = formatTemps(data.dureePartie);
+    spectateursElm.innerText = data.spectateurs;
+
+    // Header du modal
+    const finPartieModalHeaderTxt = document.getElementById('finPartieModalHeaderTxt');
+    finPartieModalHeaderTxt.innerText = 
+        estSpectateur ? gagnant.pseudo + ' a gagné la partie !' :
+        gagnant.couleur === joueurCouleur ? 'Vous avez gagné !' : 'Vous avez perdu...';
+
+}
+
+/**
+ * Un joueur a abandonné la partie.
+ */
+function abandonPartie() {
+    // Arrêter les timers
+    clearInterval(intervalleTimerRouge);
+    clearInterval(intervalleTimerBleu);
+    clearInterval(intervalleTimerPartie);
+
+    // Afficher le modal d'abandon de partie
+    abandonPartieModal.show();
+}
 
 /**
  * Un message de chat est reçu.
@@ -389,13 +631,14 @@ function messageChatRecu(data) {
         // Pseudo
         const pseudoElement = document.createElement('span');
         pseudoElement.style.color = couleur;
+        pseudoElement.className = 'pseudo';
         pseudoElement.innerText = pseudo + ' : ';
         messageElement.appendChild(pseudoElement);
 
     } else if (systeme) {
 
         // Message système
-        messageElement.classList.add('chat-msg-systeme');
+        messageElement.classList.add('systeme');
     
     }
 
@@ -405,7 +648,19 @@ function messageChatRecu(data) {
 
     // Assemblage
     messageElement.appendChild(contenuElement);
+    discussionChat.appendChild(messageElement);
 
+    // Scroller en bas de la discussion
+    discussionChat.scrollTop = discussionChat.scrollHeight;
+
+}
+
+/**
+ * Envoyer un message de chat
+ * @param {String} message Message à envoyer
+ */
+async function envoyerMessageChat(message) {
+    await envoyerMessage('chat', { message: message });
 }
 
 /**
@@ -440,24 +695,55 @@ function joueurCoup(data) {
     const colonne = data.colonne;
     const ligne = data.ligne;
     const couleur = data.couleur; // 0 = rouge, 1 = bleu
+    const total = data.total; // Nombre total de coups joués
 
     // Mettre à jour l'interface
-    const hexa = d3.select('#hex_jeu_' + ligne + '_' + colonne)
+    d3.select('#hex_jeu_' + ligne + '_' + colonne)
         .transition() /* animation: grossissement de l'hexagone, puis retour à la normale */
         .duration(300)
-        .attr('fill', couleur === 0 ? '#ff5050' : '#5cabfb')
-        .attr('transform', 'scale(1.1)');
-
-    setTimeout(() => {
-        hexa.transition()
-            .duration(300)
-            .attr('fill', couleur === 0 ? '#ff5050' : '#5cabfb')
-            .attr('transform', 'scale(1)');
-    }, 300);
+        .attr('fill', couleur === 0 ? '#e65555' : '#5f9ddb');
 
     // Mettre à jour le tour du joueur
     tourJoueur = (tourJoueur + 1) % 2;
+    afficherTourDe(tourJoueur);
+    mettreAJourTour(total);
+
+    // Mettre à jour les timers
+    if (tourJoueur === 0) {
+        intervalleTimerRouge = afficherTimer(timerJoueurRouge);
+        clearInterval(intervalleTimerBleu);
+        timerJoueurBleu.innerText = '00:00';
+    } else {
+        intervalleTimerBleu = afficherTimer(timerJoueurBleu);
+        clearInterval(intervalleTimerRouge);
+        timerJoueurRouge.innerText = '00:00';
+    }
 
 }
+
+// Envoi de messages de chat
+const chatBouton = document.getElementById('messageBtn');
+const chatInput = document.getElementById('messageInput');
+
+const envoyerMsg = () => {
+    if (chatInput.value.trim() === '') return;
+    envoyerMessageChat(chatInput.value);
+    chatInput.value = '';
+}
+
+// Envoyer un message de chat en appuyant sur 'Entrée' ou en cliquant sur le bouton
+chatBouton.addEventListener('click', envoyerMsg);
+chatInput.addEventListener('keypress', (event) => {
+    if (event.key === 'Enter') {
+        envoyerMsg();
+    }
+});
+
+// Boutons de retour vers le menu de sélection de serveur
+[document.getElementById('btnRetourMenu'), document.getElementById('btnRetourMenuAbandon')].forEach(
+    (btn) => btn.addEventListener('click', () => {
+        location.reload(); // todo plus tard: revenir à l'écran de sélection de serveur directement -> cleanup tablier + variables
+    })
+);
 
 if (MODE_BYPASS) afficherEcranJeu();

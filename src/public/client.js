@@ -111,6 +111,7 @@ function creerCarteServeur(serv) {
     const card = document.createElement('div');
     card.id = 'carteServeur_' + serv.id;
     card.classList.add('card', 'server-card', 'actif');
+    nbServeurs++;
 
     // Corps de la card
     const cardBody = document.createElement('div');
@@ -147,7 +148,9 @@ function creerCarteServeur(serv) {
  */
 function modifierCarteServeur(serv, card = null, cardText = null) {
     if (!card) card = document.getElementById('carteServeur_' + serv.id);
-    if (!card) card = document.getElementById('carteTextServeur_' + serv.id);
+    if (!cardText) cardText = document.getElementById('carteTexteServeur_' + serv.id);
+    if (!card || !cardText) return;
+
     if(serv.nbJoueurs === 1) {
         card.classList.add('border-primary', 'attente');
         cardText.innerText = '1/2 joueurs. Cliquez pour rejoindre.'
@@ -164,6 +167,6 @@ demanderListeServeurs(afficherListeServeurs);
 const createServerBtn = document.getElementById('createServerBtn');
 createServerBtn.addEventListener('click', () => {
     creerServeur(() => {
-        console.log('WAOUW!');
+        // ..
     })
 });

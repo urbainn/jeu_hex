@@ -74,12 +74,34 @@
             h4 {
                 font-size: 1.3rem;
             }
+
+            .spectateur-pseudo {
+                color: #ffffffa3;
+                font-size: 1.1rem;
+                font-weight: 700;
+            }
         }
 
         .chat-discussion {
             flex: 1 1 auto;
             display: flex;
-            flex-flow: column-reverse;
+            flex-flow: column;
+            justify-content: flex-end;
+            margin-bottom: 0.5rem;
+
+            .chat-msg {
+
+                animation: fade-in 0.3s;
+
+                &.systeme {
+                    font-style: italic;
+                    color: #a0a0a0;
+                }
+
+                .pseudo {
+                    font-weight: 700;
+                }
+            }
         }
 
         .chat-footer {
@@ -135,6 +157,7 @@
                 transform: rotate(-37deg);
                 position: absolute;
                 z-index: -1;
+                transition: left 0.5s, right 0.5s, opacity 0.5s;
             }
 
             .profil-texte {
@@ -163,6 +186,7 @@
         .modal-content {
             width: clamp(30vw, 30rem, 90vw);
             height: clamp(25vh, 15rem, 90vh);
+            transition: background-color 0.5s;
 
             .modal-body {
                 display: flex;
@@ -177,9 +201,66 @@
                     /* Crédit: Temani Afif, https://css-shape.com/hexagon/ */
                     animation: attente-joueur-hexagone 3s infinite;
                 }
+
+                .ecran-txt {
+                    animation: slide-up 0.5s;
+
+                    &.vous-jouez-couleur {
+                        h1, h4, h2 {
+                            margin: 0;
+                            transition: opacity 0.5s;
+                            text-align: center;
+                        }
+
+                        h1 {
+                            font-size: 2.5rem;
+                            font-weight: 900;
+                            margin: 0.5rem 0 1.7rem 0;
+                        }
+                    }
+                }
             }
         }
     }
+
+    &.fin-partie-modal {
+        .modal-title {
+            font-weight: 900;
+        }
+
+        .modal-dialog {
+            max-width: fit-content;
+        }
+
+        .stat-fin-partie {
+            overflow: hidden;
+            border-radius: 0.5rem;
+            width: 12rem;
+
+            .stat-entete {
+                background-color: #00000015;
+                padding: 0.5rem;
+                text-align: center;
+
+                h4 {
+                    margin: 0;
+                    font-size: 1.2rem;
+                    font-weight: 700;
+                }
+            }
+
+            .stat-corps {
+                padding: 2.2rem 1rem;
+                
+                h2 {
+                    font-size: 3rem;
+                    margin: 0;
+                    font-weight: 900;
+                    text-align: center;
+                }
+            }
+        }
+    } 
 
 }
 
@@ -218,6 +299,21 @@
         opacity: 0;
     }
     to {
+        opacity: 1;
+    }
+}
+
+.slide-up {
+    animation: slide-up 0.5s;
+}
+
+@keyframes slide-up {
+    from {
+        transform: translateY(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
         opacity: 1;
     }
 }
